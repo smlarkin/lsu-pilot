@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import pathlib
+import requests
 
 import numpy
 import pandas
@@ -137,13 +138,21 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=update.effective_chat.id,
                                        text=initial_response_message.content)
 
-
 async def mozilla(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer = answer_question(
         source_data_frame, question=update.message.text, debug=True)
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=answer)
 
+async def image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+  response = openai.images.generate(prompt=update.message.text,
+                                    model="dall-e-3",
+                                    n=1,
+                                    size="1024x1024")
+  image_url = response.data[0].url
+  image_response = requests.get(image_url)
+  await context.bot.send_photo(chat_id=update.effective_chat.id,
+                               photo=image_response.content)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -156,10 +165,12 @@ if __name__ == "__main__":
     # Define command handlers for starting the bot and chatting.
     start_handler = CommandHandler("start", start)
     chat_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), chat)
+    image_handler = CommandHandler('image', image) # <--- THIS IS NEW
     mozilla_handler = CommandHandler('mozilla', mozilla)
 
     # Add command handlers to the application.
     application.add_handler(start_handler)
+    application.add_handler(image_handler) # <--- THIS IS NEW
     application.add_handler(chat_handler)
     application.add_handler(mozilla_handler)
 
